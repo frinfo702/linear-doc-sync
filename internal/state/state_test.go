@@ -22,9 +22,9 @@ func TestStoreUpsertFindRemove(t *testing.T) {
 		SlugID:       "a1b2c3d4e5f6",
 		Slug:         "document-name",
 		Title:        "Document Name",
-		LinearURL:    "https://linear.app/uyuthropic/document/document-name-a1b2c3d4e5f6",
+		LinearURL:    "https://linear.app/example-project/document/document-name-a1b2c3d4e5f6",
 		LocalPath:    "/tmp/docs/document-name.md",
-		GitHubRepo:   "frinfo702/blog",
+		GitHubRepo:   "example/blog",
 		GitHubBranch: "main",
 		RemotePath:   "docs/document-name.md",
 		Status:       StatusPublished,
@@ -41,8 +41,8 @@ func TestStoreUpsertFindRemove(t *testing.T) {
 	}
 
 	queries := []string{
-		"https://linear.app/uyuthropic/document/document-name-a1b2c3d4e5f6",
-		"https://linear.app/uyuthropic/document/document-name-a1b2c3d4e5f6?tab=details",
+		"https://linear.app/example-project/document/document-name-a1b2c3d4e5f6",
+		"https://linear.app/example-project/document/document-name-a1b2c3d4e5f6?tab=details",
 		"doc-uuid-1",
 		"a1b2c3d4e5f6",
 		"document-name",

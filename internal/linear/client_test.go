@@ -26,7 +26,7 @@ func newTestHTTPClient(handler http.HandlerFunc) *http.Client {
 }
 
 func TestParseTarget(t *testing.T) {
-	pt := ParseTarget("https://linear.app/uyuthropic/document/my-cool-doc-a1b2c3d4e5f6?foo=bar")
+	pt := ParseTarget("https://linear.app/example-project/document/my-cool-doc-a1b2c3d4e5f6?foo=bar")
 	if !pt.IsURL {
 		t.Fatalf("expected IsURL=true")
 	}
@@ -63,7 +63,7 @@ func TestResolveDocumentByURLAndTitleFallback(t *testing.T) {
 							"title":   "My Cool Doc",
 							"slugId":  "a1b2c3d4e5f6",
 							"content": "# Hello from Linear",
-							"url":     "https://linear.app/uyuthropic/document/my-cool-doc-a1b2c3d4e5f6",
+							"url":     "https://linear.app/example-project/document/my-cool-doc-a1b2c3d4e5f6",
 						},
 					},
 				})
@@ -85,7 +85,7 @@ func TestResolveDocumentByURLAndTitleFallback(t *testing.T) {
 							"title":   "Architecture Guide",
 							"slugId":  "998877665544",
 							"content": "# Architecture",
-							"url":     "https://linear.app/uyuthropic/document/architecture-guide-998877665544",
+							"url":     "https://linear.app/example-project/document/architecture-guide-998877665544",
 						},
 					},
 					"pageInfo": map[string]any{
@@ -102,7 +102,7 @@ func TestResolveDocumentByURLAndTitleFallback(t *testing.T) {
 	client.HTTPClient = newTestHTTPClient(handler)
 
 	// 1. Direct URL resolution via slugId tail
-	doc, err := client.ResolveDocument(context.Background(), "https://linear.app/uyuthropic/document/my-cool-doc-a1b2c3d4e5f6")
+	doc, err := client.ResolveDocument(context.Background(), "https://linear.app/example-project/document/my-cool-doc-a1b2c3d4e5f6")
 	if err != nil {
 		t.Fatalf("ResolveDocument by URL failed: %v", err)
 	}

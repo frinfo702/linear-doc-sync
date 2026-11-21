@@ -68,7 +68,7 @@ Keys:
 
 Examples:
   lsy config init
-  lsy config set github_repo frinfo702/my-blog
+  lsy config set github_repo owner/my-blog
   lsy config set repo-path content/docs
   lsy config list
 `)

@@ -51,7 +51,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 					"title":   "Launch Plan",
 					"slugId":  "abc123456789",
 					"content": "# Launch Plan\n\nShip it!",
-					"url":     "https://linear.app/uyuthropic/document/launch-plan-abc123456789",
+					"url":     "https://linear.app/example-project/document/launch-plan-abc123456789",
 				},
 			},
 		})
@@ -71,7 +71,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 				return
 			}
 			_ = json.NewEncoder(w).Encode(map[string]string{
-				"path": strings.TrimPrefix(p, "/repos/frinfo702/web/contents/"),
+				"path": strings.TrimPrefix(p, "/repos/example/web/contents/"),
 				"sha":  sha,
 			})
 		case http.MethodPut:
@@ -82,12 +82,12 @@ func TestEndToEndWorkflow(t *testing.T) {
 			} else {
 				w.WriteHeader(http.StatusCreated)
 			}
-			rel := strings.TrimPrefix(p, "/repos/frinfo702/web/contents/")
+			rel := strings.TrimPrefix(p, "/repos/example/web/contents/")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"content": map[string]string{
 					"path":     rel,
 					"sha":      "blob-sha-1",
-					"html_url": "https://github.com/frinfo702/web/blob/main/" + rel,
+					"html_url": "https://github.com/example/web/blob/main/" + rel,
 				},
 				"commit": map[string]string{"sha": "commit-sha"},
 			})
@@ -128,7 +128,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 	if _, err := run("config", "set", "github_token", "ghp_secret"); err != nil {
 		t.Fatalf("config set github_token: %v", err)
 	}
-	if _, err := run("config", "set", "github_repo", "frinfo702/web"); err != nil {
+	if _, err := run("config", "set", "github_repo", "example/web"); err != nil {
 		t.Fatalf("config set github_repo: %v", err)
 	}
 	if _, err := run("config", "set", "repo-path", "content/articles"); err != nil {
@@ -141,14 +141,14 @@ func TestEndToEndWorkflow(t *testing.T) {
 	}
 
 	// 2. Publish with --repo-path override placed AFTER positional arg
-	out, err := run("publish", "https://linear.app/uyuthropic/document/launch-plan-abc123456789", "--repo-path", "blog/posts")
+	out, err := run("publish", "https://linear.app/example-project/document/launch-plan-abc123456789", "--repo-path", "blog/posts")
 	if err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 	if !strings.Contains(out, "blog/posts/launch-plan.md") {
 		t.Fatalf("expected remote path blog/posts/launch-plan.md in output, got:\n%s", out)
 	}
-	if _, ok := remoteFiles["/repos/frinfo702/web/contents/blog/posts/launch-plan.md"]; !ok {
+	if _, ok := remoteFiles["/repos/example/web/contents/blog/posts/launch-plan.md"]; !ok {
 		t.Fatalf("expected file uploaded to blog/posts/launch-plan.md, got: %+v", remoteFiles)
 	}
 

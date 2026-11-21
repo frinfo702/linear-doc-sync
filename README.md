@@ -62,10 +62,10 @@ You can also provide credentials via environment variables (`LINEAR_API_KEY`, `G
 
 ```bash
 # Publish a Linear document (clones locally to ~/.config/lsy/docs and pushes to GitHub)
-lsy publish https://linear.app/uyuthropic/document/document-name
+lsy publish https://linear.app/<your-project>/document/document-name
 
 # Publish to a custom directory in GitHub for a single command
-lsy publish https://linear.app/uyuthropic/document/document-name --repo-path blog/posts
+lsy publish https://linear.app/<your-project>/document/document-name --repo-path blog/posts
 
 # Unpublish a document from GitHub (keeps the local Markdown copy)
 lsy unpublish <url or document-name>

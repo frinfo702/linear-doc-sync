@@ -42,7 +42,7 @@ func TestEnsureInitializedAndLoadSave(t *testing.T) {
 	if err := cfg.Set("repo-path", "/content/posts/"); err != nil {
 		t.Fatalf("Set repo-path failed: %v", err)
 	}
-	if err := cfg.Set("github_repo", "frinfo702/site"); err != nil {
+	if err := cfg.Set("github_repo", "example/site"); err != nil {
 		t.Fatalf("Set github_repo failed: %v", err)
 	}
 	if err := cfg.Set("frontmatter", "false"); err != nil {
@@ -59,8 +59,8 @@ func TestEnsureInitializedAndLoadSave(t *testing.T) {
 	if loaded.RepoPath != "content/posts" {
 		t.Fatalf("expected repo_path content/posts, got %q", loaded.RepoPath)
 	}
-	if loaded.GitHubRepo != "frinfo702/site" {
-		t.Fatalf("expected github_repo frinfo702/site, got %q", loaded.GitHubRepo)
+	if loaded.GitHubRepo != "example/site" {
+		t.Fatalf("expected github_repo example/site, got %q", loaded.GitHubRepo)
 	}
 	if loaded.UseFrontmatter() {
 		t.Fatalf("expected frontmatter=false")
