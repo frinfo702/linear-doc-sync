@@ -15,6 +15,7 @@ func TestEnsureInitializedAndLoadSave(t *testing.T) {
 	t.Setenv("LSY_GITHUB_REPO", "")
 	t.Setenv("LSY_GITHUB_BRANCH", "")
 	t.Setenv("LSY_DOCS_DIR", "")
+	t.Setenv("LSY_WITH_IMAGE", "")
 
 	dir, err := EnsureInitialized()
 	if err != nil {
@@ -48,6 +49,9 @@ func TestEnsureInitializedAndLoadSave(t *testing.T) {
 	if err := cfg.Set("frontmatter", "false"); err != nil {
 		t.Fatalf("Set frontmatter failed: %v", err)
 	}
+	if err := cfg.Set("with-image", "true"); err != nil {
+		t.Fatalf("Set with-image failed: %v", err)
+	}
 	if err := Save(cfg); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
@@ -65,15 +69,25 @@ func TestEnsureInitializedAndLoadSave(t *testing.T) {
 	if loaded.UseFrontmatter() {
 		t.Fatalf("expected frontmatter=false")
 	}
+	if !loaded.WithImage {
+		t.Fatalf("expected with_image=true")
+	}
 
 	// Verify env override takes precedence.
 	t.Setenv("LSY_REPO_PATH", "custom/blog")
+	t.Setenv("LSY_WITH_IMAGE", "false")
 	loaded, err = Load()
 	if err != nil {
 		t.Fatalf("Load with env failed: %v", err)
 	}
 	if loaded.RepoPath != "custom/blog" {
 		t.Fatalf("expected env override custom/blog, got %q", loaded.RepoPath)
+	}
+	if loaded.WithImage {
+		t.Fatalf("expected env override with_image=false")
+	}
+	if EnvOverrideName("with-image") != "LSY_WITH_IMAGE" {
+		t.Fatalf("expected EnvOverrideName(with-image)=LSY_WITH_IMAGE, got %q", EnvOverrideName("with-image"))
 	}
 }
 

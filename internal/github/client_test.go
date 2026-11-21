@@ -142,3 +142,57 @@ func TestUpsertAndDeleteFile(t *testing.T) {
 		t.Fatalf("expected file to be deleted")
 	}
 }
+
+func TestUpsertFileIfChangedSkipsIdenticalBlob(t *testing.T) {
+	putCount := 0
+	content := []byte("binary-image-data")
+	expectedSHA := GitBlobSHA(content)
+	remoteSHA := ""
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.Method {
+		case http.MethodGet:
+			if remoteSHA == "" {
+				w.WriteHeader(http.StatusNotFound)
+				_ = json.NewEncoder(w).Encode(map[string]string{"message": "Not Found"})
+				return
+			}
+			_ = json.NewEncoder(w).Encode(FileInfo{
+				Path: "docs/images/doc/img.png",
+				SHA:  remoteSHA,
+			})
+		case http.MethodPut:
+			putCount++
+			remoteSHA = expectedSHA
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"content": map[string]string{
+					"path": "docs/images/doc/img.png",
+					"sha":  expectedSHA,
+				},
+				"commit": map[string]string{"sha": "c1"},
+			})
+		}
+	})
+
+	client := NewClient("gh_test")
+	client.APIBase = "https://github.test"
+	client.HTTPClient = newTestHTTPClient(handler)
+
+	res1, err := client.UpsertFileIfChanged(context.Background(), "owner/repo", "main", "docs/images/doc/img.png", "add image", content)
+	if err != nil {
+		t.Fatalf("first UpsertFileIfChanged failed: %v", err)
+	}
+	if res1.Unchanged || !res1.Created || putCount != 1 {
+		t.Fatalf("expected upload on first call: res=%+v putCount=%d", res1, putCount)
+	}
+
+	res2, err := client.UpsertFileIfChanged(context.Background(), "owner/repo", "main", "docs/images/doc/img.png", "add image", content)
+	if err != nil {
+		t.Fatalf("second UpsertFileIfChanged failed: %v", err)
+	}
+	if !res2.Unchanged || putCount != 1 {
+		t.Fatalf("expected second call to skip PUT: res=%+v putCount=%d", res2, putCount)
+	}
+}

@@ -9,13 +9,17 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/frinfo702/linear-doc-sync/internal/markdown"
 )
 
-const DefaultEndpoint = "https://api.linear.app/graphql"
+const (
+	DefaultEndpoint = "https://api.linear.app/graphql"
+	maxAssetBytes   = 50 << 20 // 50 MiB
+)
 
 // ErrNotFound is returned when a Linear document cannot be found.
 var ErrNotFound = errors.New("linear document not found")
@@ -33,9 +37,10 @@ type Document struct {
 
 // Client communicates with the Linear GraphQL API.
 type Client struct {
-	Endpoint   string
-	APIKey     string
-	HTTPClient *http.Client
+	Endpoint         string
+	APIKey           string
+	HTTPClient       *http.Client
+	SignedFileURLTTL int // If > 0, sets public-file-urls-expire-in header on GraphQL requests.
 }
 
 // NewClient constructs a Linear API client.
@@ -90,6 +95,9 @@ func (c *Client) do(ctx context.Context, query string, variables map[string]any,
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", c.APIKey)
+	if c.SignedFileURLTTL > 0 {
+		req.Header.Set("public-file-urls-expire-in", strconv.Itoa(c.SignedFileURLTTL))
+	}
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -322,4 +330,89 @@ func (c *Client) findInWorkspace(ctx context.Context, pt ParsedTarget) (*Documen
 	}
 
 	return nil, fmt.Errorf("%w: %q", ErrNotFound, pt.Raw)
+}
+
+// DownloadAsset downloads an image or file URL referenced in a Linear document.
+// For Linear-hosted assets (uploads.linear.app / *.linear.app), the Linear API
+// key is sent in the Authorization header when the URL is not already pre-signed.
+// Authorization is never sent to third-party hosts.
+func (c *Client) DownloadAsset(ctx context.Context, assetURL string) ([]byte, string, error) {
+	parsed, err := url.Parse(strings.TrimSpace(assetURL))
+	if err != nil {
+		return nil, "", fmt.Errorf("invalid image URL %q: %w", assetURL, err)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return nil, "", fmt.Errorf("unsupported image URL scheme %q", parsed.Scheme)
+	}
+
+	httpClient := c.HTTPClient
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 60 * time.Second}
+	}
+
+	isLinear := c.isLinearHost(parsed.Hostname())
+	hasSig := parsed.Query().Get("signature") != ""
+
+	sendAuth := isLinear && !hasSig && c.APIKey != ""
+	data, contentType, status, err := c.fetchAssetOnce(ctx, httpClient, assetURL, sendAuth)
+	if err != nil && (status == http.StatusUnauthorized || status == http.StatusForbidden) && isLinear && !sendAuth && c.APIKey != "" {
+		// Fallback: retry with Authorization header if a pre-signed Linear URL was rejected.
+		data, contentType, _, err = c.fetchAssetOnce(ctx, httpClient, assetURL, true)
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	return data, contentType, nil
+}
+
+func (c *Client) fetchAssetOnce(ctx context.Context, httpClient *http.Client, assetURL string, withAuth bool) ([]byte, string, int, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, assetURL, nil)
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("create image request for %s: %w", assetURL, err)
+	}
+	if withAuth && c.APIKey != "" {
+		req.Header.Set("Authorization", c.APIKey)
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("download image %s: %w", assetURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return nil, "", resp.StatusCode, fmt.Errorf("download image %s failed (HTTP %d): authentication required — check your LINEAR_API_KEY", assetURL, resp.StatusCode)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, "", resp.StatusCode, fmt.Errorf("download image %s failed (HTTP %d)", assetURL, resp.StatusCode)
+	}
+
+	limited := io.LimitReader(resp.Body, maxAssetBytes+1)
+	data, err := io.ReadAll(limited)
+	if err != nil {
+		return nil, "", resp.StatusCode, fmt.Errorf("read image %s: %w", assetURL, err)
+	}
+	if int64(len(data)) > maxAssetBytes {
+		return nil, "", resp.StatusCode, fmt.Errorf("image %s exceeds maximum allowed size (%d bytes)", assetURL, maxAssetBytes)
+	}
+	return data, resp.Header.Get("Content-Type"), resp.StatusCode, nil
+}
+
+func (c *Client) isLinearHost(host string) bool {
+	h := strings.ToLower(strings.TrimSpace(host))
+	if h == "" {
+		return false
+	}
+	if h == "linear.app" || strings.HasSuffix(h, ".linear.app") {
+		return true
+	}
+	if c.Endpoint != "" {
+		if ep, err := url.Parse(c.Endpoint); err == nil {
+			epHost := strings.ToLower(ep.Hostname())
+			if epHost != "" && (h == epHost || strings.HasSuffix(h, "."+epHost)) {
+				return true
+			}
+		}
+	}
+	return false
 }

@@ -24,6 +24,7 @@ type Config struct {
 	RepoPath     string `json:"repo_path"`
 	DocsDir      string `json:"docs_dir"`
 	Frontmatter  *bool  `json:"frontmatter"`
+	WithImage    bool   `json:"with_image"`
 }
 
 // DefaultConfig returns a Config populated with sensible defaults.
@@ -148,6 +149,13 @@ func Load() (Config, error) {
 	if v := strings.TrimSpace(os.Getenv("LSY_DOCS_DIR")); v != "" {
 		cfg.DocsDir = v
 	}
+	if v := strings.TrimSpace(os.Getenv("LSY_WITH_IMAGE")); v != "" {
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid boolean for LSY_WITH_IMAGE: %q (use true or false)", v)
+		}
+		cfg.WithImage = b
+	}
 	return cfg, nil
 }
 
@@ -215,6 +223,8 @@ func NormalizeKey(key string) string {
 		return "github_branch"
 	case "path":
 		return "repo_path"
+	case "with_images", "images":
+		return "with_image"
 	default:
 		return k
 	}
@@ -230,6 +240,7 @@ func ValidKeys() []string {
 		"repo_path",
 		"docs_dir",
 		"frontmatter",
+		"with_image",
 	}
 }
 
@@ -262,6 +273,12 @@ func (c *Config) Set(key, value string) error {
 			return fmt.Errorf("invalid boolean for frontmatter: %q (use true or false)", value)
 		}
 		c.Frontmatter = &b
+	case "with_image":
+		b, err := strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return fmt.Errorf("invalid boolean for with_image: %q (use true or false)", value)
+		}
+		c.WithImage = b
 	default:
 		return fmt.Errorf("unknown config key %q (valid keys: %s)", key, strings.Join(ValidKeys(), ", "))
 	}
@@ -291,6 +308,8 @@ func (c Config) Get(key string, reveal bool) (string, error) {
 		return c.DocsDir, nil
 	case "frontmatter":
 		return strconv.FormatBool(c.UseFrontmatter()), nil
+	case "with_image":
+		return strconv.FormatBool(c.WithImage), nil
 	default:
 		return "", fmt.Errorf("unknown config key %q (valid keys: %s)", key, strings.Join(ValidKeys(), ", "))
 	}
@@ -312,6 +331,8 @@ func EnvOverrideName(key string) string {
 		envName = "LSY_REPO_PATH"
 	case "docs_dir":
 		envName = "LSY_DOCS_DIR"
+	case "with_image":
+		envName = "LSY_WITH_IMAGE"
 	default:
 		return ""
 	}

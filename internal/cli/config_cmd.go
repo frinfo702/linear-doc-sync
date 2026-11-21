@@ -65,6 +65,7 @@ Keys:
   repo_path            Default directory path in GitHub (default: docs, env: LSY_REPO_PATH)
   docs_dir             Local directory for cloned Markdown files (env: LSY_DOCS_DIR)
   frontmatter          Prepend YAML frontmatter (true|false, default: true)
+  with_image           Download images locally and push to GitHub (true|false, default: false, env: LSY_WITH_IMAGE)
 
 Examples:
   lsy config init
@@ -136,6 +137,15 @@ func (a *App) runConfigInit(args []string) error {
 	}
 	if v, err := prompt("Default GitHub Directory (--repo-path, empty for repo root)", cfg.RepoPath, false); err == nil {
 		if err := cfg.Set("repo_path", v); err != nil {
+			return err
+		}
+	}
+	withImageDefault := "false"
+	if cfg.WithImage {
+		withImageDefault = "true"
+	}
+	if v, err := prompt("Download images locally (with_image, true/false)", withImageDefault, false); err == nil {
+		if err := cfg.Set("with_image", v); err != nil {
 			return err
 		}
 	}

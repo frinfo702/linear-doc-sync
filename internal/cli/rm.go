@@ -76,8 +76,17 @@ Flags:
 		if err := ghClient.DeleteFile(ctx, rec.GitHubRepo, branch, rec.RemotePath, "", msg); err != nil && !errors.Is(err, github.ErrNotFound) {
 			return fmt.Errorf("failed to unpublish from github before local removal: %w", err)
 		}
+		if len(rec.Images) > 0 {
+			if err := deleteRemoteImages(ctx, ghClient, rec.GitHubRepo, branch, msg, rec.Images); err != nil {
+				return fmt.Errorf("failed to unpublish images from github before local removal: %w", err)
+			}
+		}
 		fmt.Fprintf(a.Stdout, "Unpublished %s from %s\n", rec.RemotePath, rec.GitHubRepo)
 		wasPublished = false
+	}
+
+	if len(rec.Images) > 0 {
+		removeLocalImageFiles(rec.Images)
 	}
 
 	if rec.LocalPath != "" {

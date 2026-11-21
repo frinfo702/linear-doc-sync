@@ -119,3 +119,84 @@ func TestResolveDocumentByURLAndTitleFallback(t *testing.T) {
 		t.Fatalf("unexpected doc2: %+v", doc2)
 	}
 }
+
+func TestDownloadAssetAndSignedURLHeader(t *testing.T) {
+	var sawExpireHeader string
+	var authHeaders = map[string]string{}
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/graphql" {
+			sawExpireHeader = r.Header.Get("public-file-urls-expire-in")
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"document": map[string]any{
+						"id":     "uuid-1",
+						"title":  "Doc",
+						"slugId": "abc",
+					},
+				},
+			})
+			return
+		}
+		authHeaders[r.URL.String()] = r.Header.Get("Authorization")
+		if r.URL.Host == "uploads.linear.app" && r.URL.Query().Get("signature") == "expired" && r.Header.Get("Authorization") == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write([]byte("png-bytes"))
+	})
+
+	client := NewClient("lin_api_secret")
+	client.Endpoint = "https://linear.test/graphql"
+	client.SignedFileURLTTL = 300
+	client.HTTPClient = newTestHTTPClient(handler)
+
+	if _, err := client.GetByID(context.Background(), "abc"); err != nil {
+		t.Fatalf("GetByID failed: %v", err)
+	}
+	if sawExpireHeader != "300" {
+		t.Fatalf("expected public-file-urls-expire-in=300, got %q", sawExpireHeader)
+	}
+
+	// 1. Unsigned Linear upload URL receives Authorization header.
+	u1 := "https://uploads.linear.app/org/file/img.png"
+	data, ct, err := client.DownloadAsset(context.Background(), u1)
+	if err != nil {
+		t.Fatalf("DownloadAsset linear failed: %v", err)
+	}
+	if string(data) != "png-bytes" || ct != "image/png" {
+		t.Fatalf("unexpected download result: %q %q", string(data), ct)
+	}
+	if authHeaders[u1] != "lin_api_secret" {
+		t.Fatalf("expected Authorization header on uploads.linear.app, got %q", authHeaders[u1])
+	}
+
+	// 2. Signed Linear URL omits Authorization initially.
+	u2 := "https://uploads.linear.app/org/file/img.png?signature=valid"
+	if _, _, err := client.DownloadAsset(context.Background(), u2); err != nil {
+		t.Fatalf("DownloadAsset signed linear failed: %v", err)
+	}
+	if authHeaders[u2] != "" {
+		t.Fatalf("expected no Authorization header on pre-signed URL, got %q", authHeaders[u2])
+	}
+
+	// 3. Expired signed Linear URL retries with Authorization header.
+	u3 := "https://uploads.linear.app/org/file/img.png?signature=expired"
+	if _, _, err := client.DownloadAsset(context.Background(), u3); err != nil {
+		t.Fatalf("DownloadAsset expired signed retry failed: %v", err)
+	}
+	if authHeaders[u3] != "lin_api_secret" {
+		t.Fatalf("expected fallback Authorization header on retry, got %q", authHeaders[u3])
+	}
+
+	// 4. Third-party host NEVER receives Linear API key.
+	u4 := "https://cdn.example.com/public.png"
+	if _, _, err := client.DownloadAsset(context.Background(), u4); err != nil {
+		t.Fatalf("DownloadAsset third-party failed: %v", err)
+	}
+	if authHeaders[u4] != "" {
+		t.Fatalf("leaked Linear API key to third-party host: %q", authHeaders[u4])
+	}
+}

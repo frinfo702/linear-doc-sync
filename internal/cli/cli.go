@@ -65,6 +65,8 @@ func (a *App) Run(ctx context.Context, args []string) error {
 		return nil
 	case "publish":
 		return a.runPublish(ctx, rest)
+	case "fetch", "pull":
+		return a.runFetch(ctx, rest)
 	case "unpublish":
 		return a.runUnpublish(ctx, rest)
 	case "list", "ls":
@@ -106,6 +108,7 @@ Usage:
 
 Commands:
   publish <url|name>    Fetch a Linear document locally and publish it to GitHub
+  fetch [url|name]      Fetch document(s) from Linear and update local state (alias: pull)
   unpublish <url|name>  Remove a published document from GitHub (keeps local copy)
   list                  List locally tracked documents (alias: ls)
   rm <url|name>         Delete a document from local storage
@@ -119,8 +122,11 @@ Global Flags:
 Examples:
   lsy config init
   lsy config set repo-path content/docs
-  lsy publish https://linear.app/workspace/document/my-doc-a1b2c3d4e5f6
+  lsy config set with-image true
+  lsy publish https://linear.app/workspace/document/my-doc-a1b2c3d4e5f6 --with-image
   lsy publish https://linear.app/workspace/document/my-doc-a1b2c3d4e5f6 --repo-path blog/posts
+  lsy fetch
+  lsy fetch my-doc --with-image
   lsy list
   lsy unpublish my-doc
   lsy rm my-doc

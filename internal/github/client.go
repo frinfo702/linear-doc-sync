@@ -3,7 +3,9 @@ package github
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -51,6 +53,15 @@ type UpsertResult struct {
 	HTMLURL   string
 	CommitSHA string
 	Created   bool
+	Unchanged bool
+}
+
+// GitBlobSHA computes the standard Git blob SHA-1 hash for content.
+func GitBlobSHA(content []byte) string {
+	h := sha1.New()
+	fmt.Fprintf(h, "blob %d\x00", len(content))
+	h.Write(content)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (c *Client) contentsURL(repo, filePath string) (string, error) {
@@ -165,6 +176,16 @@ func (c *Client) GetFile(ctx context.Context, repo, branch, filePath string) (*F
 
 // UpsertFile creates or updates a file at filePath in repo on branch.
 func (c *Client) UpsertFile(ctx context.Context, repo, branch, filePath, message string, content []byte) (*UpsertResult, error) {
+	return c.upsertFile(ctx, repo, branch, filePath, message, content, false)
+}
+
+// UpsertFileIfChanged creates or updates a file at filePath in repo on branch,
+// skipping the write if the remote file already has an identical Git blob SHA.
+func (c *Client) UpsertFileIfChanged(ctx context.Context, repo, branch, filePath, message string, content []byte) (*UpsertResult, error) {
+	return c.upsertFile(ctx, repo, branch, filePath, message, content, true)
+}
+
+func (c *Client) upsertFile(ctx context.Context, repo, branch, filePath, message string, content []byte, skipIfUnchanged bool) (*UpsertResult, error) {
 	u, err := c.contentsURL(repo, filePath)
 	if err != nil {
 		return nil, err
@@ -173,6 +194,14 @@ func (c *Client) UpsertFile(ctx context.Context, repo, branch, filePath, message
 	existingSHA := ""
 	existing, err := c.GetFile(ctx, repo, branch, filePath)
 	if err == nil && existing != nil {
+		if skipIfUnchanged && existing.SHA != "" && existing.SHA == GitBlobSHA(content) {
+			return &UpsertResult{
+				Path:      existing.Path,
+				SHA:       existing.SHA,
+				HTMLURL:   existing.HTMLURL,
+				Unchanged: true,
+			}, nil
+		}
 		existingSHA = existing.SHA
 	} else if err != nil && !errors.Is(err, ErrNotFound) {
 		return nil, err

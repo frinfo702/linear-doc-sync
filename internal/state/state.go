@@ -19,21 +19,33 @@ const (
 	StatusUnpublished = "unpublished"
 )
 
+// ImageAsset tracks a localized image file associated with a document.
+type ImageAsset struct {
+	OriginalURL  string `json:"original_url,omitempty"`
+	RelativePath string `json:"relative_path"`
+	LocalPath    string `json:"local_path,omitempty"`
+	RemotePath   string `json:"remote_path,omitempty"`
+	RemoteSHA    string `json:"remote_sha,omitempty"`
+}
+
 // Record represents a tracked Linear document synced to local disk and optionally GitHub.
 type Record struct {
-	LinearID     string    `json:"linear_id"`
-	SlugID       string    `json:"slug_id"`
-	Slug         string    `json:"slug"`
-	Title        string    `json:"title"`
-	LinearURL    string    `json:"linear_url"`
-	LocalPath    string    `json:"local_path"`
-	GitHubRepo   string    `json:"github_repo,omitempty"`
-	GitHubBranch string    `json:"github_branch,omitempty"`
-	RemotePath   string    `json:"remote_path,omitempty"`
-	RemoteSHA    string    `json:"remote_sha,omitempty"`
-	Status       string    `json:"status"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	PublishedAt  time.Time `json:"published_at,omitempty"`
+	LinearID        string       `json:"linear_id"`
+	SlugID          string       `json:"slug_id"`
+	Slug            string       `json:"slug"`
+	Title           string       `json:"title"`
+	LinearURL       string       `json:"linear_url"`
+	LocalPath       string       `json:"local_path"`
+	LocalHash       string       `json:"local_hash,omitempty"`
+	Images          []ImageAsset `json:"images,omitempty"`
+	GitHubRepo      string       `json:"github_repo,omitempty"`
+	GitHubBranch    string       `json:"github_branch,omitempty"`
+	RemotePath      string       `json:"remote_path,omitempty"`
+	RemoteSHA       string       `json:"remote_sha,omitempty"`
+	Status          string       `json:"status"`
+	LinearUpdatedAt time.Time    `json:"linear_updated_at,omitempty"`
+	UpdatedAt       time.Time    `json:"updated_at"`
+	PublishedAt     time.Time    `json:"published_at,omitempty"`
 }
 
 // Store holds all tracked documents.

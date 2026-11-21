@@ -28,7 +28,10 @@ By default, all configuration, state, and local document clones live under `~/.c
 ├── config.json   # Configuration (0600 permissions)
 ├── state.json    # Tracked documents metadata & publish status (0600 permissions)
 └── docs/         # Local Markdown clones of fetched Linear documents
-    └── <slug>.md
+    ├── <slug>.md
+    └── images/
+        └── <slug>/
+            └── <image>-<hash>.<ext>
 ```
 
 ### `config.json` Schema
@@ -41,7 +44,8 @@ By default, all configuration, state, and local document clones live under `~/.c
   "github_branch": "main",
   "repo_path": "docs",
   "docs_dir": "",
-  "frontmatter": true
+  "frontmatter": true,
+  "with_image": false
 }
 ```
 
@@ -54,6 +58,7 @@ By default, all configuration, state, and local document clones live under `~/.c
 | `repo_path` | string | `"docs"` | `LSY_REPO_PATH` | Default directory path inside the GitHub repository (`""` for repo root) |
 | `docs_dir` | string | `~/.config/lsy/docs` | `LSY_DOCS_DIR` | Local directory for cloned Markdown files |
 | `frontmatter` | bool | `true` | — | Prepend YAML frontmatter (`title`, `linear_id`, `slug`, `linear_url`, `updated_at`) |
+| `with_image` | bool | `false` | `LSY_WITH_IMAGE` | Download images locally and upload them to GitHub with rewritten relative links |
 
 Environment variables take precedence over values stored in `config.json`.
 
@@ -102,7 +107,21 @@ Fetches a Linear document, saves/updates its local Markdown clone, and pushes it
   - `--filename <name>`: Override Markdown filename (default: `<slug>.md`)
   - `--message <msg>`: Custom Git commit message (default: `docs(lsy): publish <title>`)
   - `--no-frontmatter`: Do not prepend YAML frontmatter
+  - `--with-image`: Download images locally to `images/<slug>/`, rewrite links to `./images/<slug>/<file>`, and push them to GitHub (overrides `with_image` config)
   - `--local-only`: Fetch and save locally without pushing to GitHub
+
+### `lsy fetch [url-or-name] [flags]` (alias: `pull`)
+
+Fetches document(s) from Linear and updates local Markdown clones and `state.json` without pushing to GitHub. When no argument is provided, refreshes all tracked documents in `state.json`. If local modifications are detected (compared against the last synced `local_hash`), prompts the user to choose whether to overwrite the local file or keep local changes.
+
+- **Argument**: `[url-or-name]` (optional) — Linear document URL, `slugId`, UUID, title, or tracked name/slug.
+- **Flags**:
+  - `--all`: Fetch all tracked documents (default when no argument is given)
+  - `--with-image`: Download images locally and rewrite Markdown links (overrides `with_image` config)
+  - `--filename <name>`: Override Markdown filename (single document only)
+  - `--no-frontmatter`: Do not prepend YAML frontmatter
+  - `-f`, `--force`: Overwrite local changes without prompting
+  - `--keep-local`: Keep local changes without prompting (skip modified files)
 
 ### `lsy unpublish <url-or-name> [flags]`
 

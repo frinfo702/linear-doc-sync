@@ -155,6 +155,20 @@ Flags:
 	}
 
 	if rec != nil {
+		if len(rec.Images) > 0 {
+			if err := deleteRemoteImages(ctx, ghClient, repo, branch, commitMsg, rec.Images); err != nil {
+				return fmt.Errorf("unpublish images from github failed: %w", err)
+			}
+			keptImages := make([]state.ImageAsset, 0, len(rec.Images))
+			for _, img := range rec.Images {
+				img.RemotePath = ""
+				img.RemoteSHA = ""
+				if img.LocalPath != "" {
+					keptImages = append(keptImages, img)
+				}
+			}
+			st.Documents[idx].Images = keptImages
+		}
 		st.Documents[idx].Status = state.StatusUnpublished
 		st.Documents[idx].RemoteSHA = ""
 		st.Documents[idx].UpdatedAt = time.Now().UTC()
