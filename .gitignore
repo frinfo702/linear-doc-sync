@@ -1,0 +1,14 @@
+# Binaries & build outputs
+/lsy
+/bin/
+/dist/
+
+# Coverage & test artifacts
+coverage.out
+*.test
+
+# OS & editor files
+.DS_Store
+.idea/
+.vscode/
+*.swp

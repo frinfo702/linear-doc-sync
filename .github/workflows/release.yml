@@ -1,0 +1,183 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Part of the version to bump'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release (${{ inputs.bump }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Verify formatting, types, and tests
+        run: |
+          test -z "$(gofmt -l .)"
+          go vet ./...
+          go test -race ./...
+          sh -n install.sh
+
+      - name: Compute next semantic version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          git fetch --tags --force
+          latest="$(git tag -l 'v*.*.*' --sort=-v:refname | head -n 1)"
+          if [ -z "$latest" ]; then
+            latest="v0.0.0"
+          fi
+
+          clean="${latest#v}"
+          clean="${clean%%-*}"
+          IFS='.' read -r major minor patch <<EOF
+          $clean
+          EOF
+
+          case "$BUMP" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+            *)
+              echo "Invalid bump type: $BUMP" >&2
+              exit 1
+              ;;
+          esac
+
+          next_version="${major}.${minor}.${patch}"
+          next_tag="v${next_version}"
+          echo "Previous tag: ${latest}"
+          echo "Next tag:     ${next_tag}"
+          echo "version=${next_version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${next_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release binaries and checksums
+        id: build
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${BUILD_DATE}"
+          mkdir -p dist
+
+          for target in darwin/arm64 darwin/amd64 linux/arm64 linux/amd64; do
+            goos="${target%/*}"
+            goarch="${target#*/}"
+            stage="dist/stage_${goos}_${goarch}"
+            mkdir -p "$stage"
+
+            echo "Building lsy ${VERSION} for ${goos}/${goarch}..."
+            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
+              go build -trimpath -ldflags "$LDFLAGS" -o "${stage}/lsy" ./cmd/lsy
+
+            archive="lsy_${VERSION}_${goos}_${goarch}.tar.gz"
+            tar -C "$stage" -czf "dist/${archive}" lsy
+            rm -rf "$stage"
+          done
+
+          (cd dist && sha256sum lsy_*.tar.gz > checksums.txt)
+          cat dist/checksums.txt
+
+          get_sha() {
+            awk -v f="$1" '$2 == f { print $1 }' dist/checksums.txt
+          }
+
+          echo "darwin_arm64_sha=$(get_sha "lsy_${VERSION}_darwin_arm64.tar.gz")" >> "$GITHUB_OUTPUT"
+          echo "darwin_amd64_sha=$(get_sha "lsy_${VERSION}_darwin_amd64.tar.gz")" >> "$GITHUB_OUTPUT"
+          echo "linux_arm64_sha=$(get_sha "lsy_${VERSION}_linux_arm64.tar.gz")" >> "$GITHUB_OUTPUT"
+          echo "linux_amd64_sha=$(get_sha "lsy_${VERSION}_linux_amd64.tar.gz")" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push git tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release create "$TAG" dist/lsy_*.tar.gz dist/checksums.txt \
+            --title "$TAG" \
+            --generate-notes
+
+      - name: Update Homebrew Formula (Formula/lsy.rb)
+        env:
+          REPO: ${{ github.repository }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+          DARWIN_ARM64_SHA: ${{ steps.build.outputs.darwin_arm64_sha }}
+          DARWIN_AMD64_SHA: ${{ steps.build.outputs.darwin_amd64_sha }}
+          LINUX_ARM64_SHA: ${{ steps.build.outputs.linux_arm64_sha }}
+          LINUX_AMD64_SHA: ${{ steps.build.outputs.linux_amd64_sha }}
+        run: |
+          mkdir -p Formula
+          sh scripts/render-formula.sh \
+            "$REPO" \
+            "$VERSION" \
+            "$DARWIN_ARM64_SHA" \
+            "$DARWIN_AMD64_SHA" \
+            "$LINUX_ARM64_SHA" \
+            "$LINUX_AMD64_SHA" > Formula/lsy.rb
+
+          git add Formula/lsy.rb
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(release): update Homebrew formula for ${TAG}"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Mirror Formula to homebrew-tap (optional)
+        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAP_REPO: ${{ vars.HOMEBREW_TAP_REPO || format('{0}/homebrew-tap', github.repository_owner) }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/${TAP_REPO}.git" tap-repo
+          mkdir -p tap-repo/Formula
+          cp Formula/lsy.rb tap-repo/Formula/lsy.rb
+          cd tap-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/lsy.rb
+          if ! git diff --cached --quiet; then
+            git commit -m "lsy ${TAG}"
+            git push origin HEAD
+          fi
