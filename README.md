@@ -7,8 +7,7 @@ CLI to publish documents from [Linear](https://linear.app/) to GitHub as Markdow
 ### Homebrew
 
 ```bash
-brew tap frinfo702/lsy https://github.com/frinfo702/linear-doc-sync
-brew install frinfo702/lsy/lsy
+brew install frinfo702/tap/lsy
 ```
 
 ### curl (prebuilt binary)
