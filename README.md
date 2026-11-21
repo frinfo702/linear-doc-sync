@@ -2,20 +2,14 @@
 
 CLI to publish documents from [Linear](https://linear.app/) to GitHub as Markdown files.
 
-See [docs/SPEC.md](docs/SPEC.md) for the full specification.
-
 ## Installation
 
 ### Homebrew
-
-Install directly from this repository:
 
 ```bash
 brew tap frinfo702/lsy https://github.com/frinfo702/linear-doc-sync
 brew install frinfo702/lsy/lsy
 ```
-
-*(If you also mirror the formula to `frinfo702/homebrew-tap` via `HOMEBREW_TAP_TOKEN`, users can install via `brew install frinfo702/tap/lsy`.)*
 
 ### curl (prebuilt binary)
 
@@ -87,14 +81,3 @@ lsy config set repo-path docs/guides
 2. It then publishes (creates or updates) that Markdown file directly to your configured GitHub repository via the GitHub Contents API at `<repo-path>/<slug>.md`.
 3. Your downstream web app (Next.js, Astro, Hugo, Docusaurus, etc.) can render the Markdown files however you like.
 4. Use `--repo-path` per command or `lsy config set repo-path <dir>` to control the destination directory in GitHub.
-
-## Releasing (GitHub Actions)
-
-1. Go to **Actions → Release → Run workflow** in GitHub.
-2. Select which version part to bump (`patch`, `minor`, or `major`) and click **Run workflow**.
-3. The workflow automatically:
-   - Runs formatting, `go vet`, and `go test -race`
-   - Computes the next semantic version tag (`vX.Y.Z`)
-   - Cross-compiles static binaries for macOS (`arm64`, `amd64`) and Linux (`arm64`, `amd64`) + `checksums.txt`
-   - Tags the commit and publishes a GitHub Release
-   - Updates `Formula/lsy.rb` with the new version and SHA256 checksums (and mirrors to `homebrew-tap` if `HOMEBREW_TAP_TOKEN` is set)
