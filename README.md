@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.jpg" alt="linear-doc-sync — Sync Linear documents to GitHub as Markdown" width="90%" />
+</p>
+
 # Linear doc sync (`lsy`)
 
 CLI to publish documents from [Linear](https://linear.app/) to GitHub as Markdown files.
