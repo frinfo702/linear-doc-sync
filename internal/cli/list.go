@@ -11,7 +11,7 @@ import (
 	"github.com/frinfo702/linear-doc-sync/internal/state"
 )
 
-func (a *App) runList(_ context.Context, args []string) error {
+func (a *App) runList(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("list", flag.ContinueOnError)
 	fs.SetOutput(a.Stderr)
 
@@ -19,11 +19,14 @@ func (a *App) runList(_ context.Context, args []string) error {
 		publishedOnly   bool
 		unpublishedOnly bool
 		jsonOutput      bool
+		interactiveFlag bool
 	)
 
 	fs.BoolVar(&publishedOnly, "published", false, "Show only published documents")
 	fs.BoolVar(&unpublishedOnly, "unpublished", false, "Show only unpublished documents")
 	fs.BoolVar(&jsonOutput, "json", false, "Output as JSON")
+	fs.BoolVar(&interactiveFlag, "interactive", false, "Interactively toggle publish/private status")
+	fs.BoolVar(&interactiveFlag, "i", false, "Interactively toggle publish/private status")
 	fs.Usage = func() {
 		fmt.Fprint(a.Stdout, `Usage:
   lsy list [flags]
@@ -31,10 +34,11 @@ func (a *App) runList(_ context.Context, args []string) error {
 List all locally tracked Linear documents.
 
 Flags:
-  --published     Show only published documents
-  --unpublished   Show only unpublished documents
-  --json          Output as JSON
-  -h, --help      Show help
+  --published       Show only published documents
+  --unpublished     Show only unpublished documents
+  -i, --interactive Interactively toggle documents between published and private
+  --json            Output as JSON
+  -h, --help        Show help
 `)
 	}
 
@@ -46,6 +50,15 @@ Flags:
 	}
 	if publishedOnly && unpublishedOnly {
 		return errors.New("--published and --unpublished cannot be combined")
+	}
+	if interactiveFlag && jsonOutput {
+		return errors.New("--interactive and --json cannot be combined")
+	}
+	if interactiveFlag {
+		return a.runInteractiveToggle(ctx, toggleOptions{
+			publishedOnly:   publishedOnly,
+			unpublishedOnly: unpublishedOnly,
+		})
 	}
 
 	st, err := state.Load()

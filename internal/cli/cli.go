@@ -69,6 +69,8 @@ func (a *App) Run(ctx context.Context, args []string) error {
 		return a.runFetch(ctx, rest)
 	case "unpublish":
 		return a.runUnpublish(ctx, rest)
+	case "toggle", "switch":
+		return a.runToggle(ctx, rest)
 	case "list", "ls":
 		return a.runList(ctx, rest)
 	case "rm", "remove":
@@ -110,6 +112,7 @@ Commands:
   publish <url|name>    Fetch a Linear document locally and publish it to GitHub
   fetch [url|name]      Fetch document(s) from Linear and update local state (alias: pull)
   unpublish <url|name>  Remove a published document from GitHub (keeps local copy)
+  toggle                Interactively toggle documents between published and private (alias: switch)
   list                  List locally tracked documents (alias: ls)
   rm <url|name>         Delete a document from local storage
   config [subcommand]   Manage ~/.config/lsy configuration (init, set, get, list, path)
@@ -127,7 +130,9 @@ Examples:
   lsy publish https://linear.app/workspace/document/my-doc-a1b2c3d4e5f6 --repo-path blog/posts
   lsy fetch
   lsy fetch my-doc --with-image
+  lsy toggle
   lsy list
+  lsy list -i
   lsy unpublish my-doc
   lsy rm my-doc
 

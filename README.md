@@ -76,6 +76,11 @@ lsy fetch --keep-local   # skip files with local changes without prompting
 # Unpublish a document from GitHub (keeps the local Markdown copy)
 lsy unpublish <url or document-name>
 
+# Interactively switch documents between published ([x]) and private ([ ])
+# (arrow keys or j/k to move, Space to toggle, Enter to confirm, q/Esc to cancel)
+lsy toggle
+lsy list -i
+
 # List all locally tracked documents and their publish status
 lsy list
 

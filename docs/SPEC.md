@@ -134,6 +134,29 @@ Deletes the published Markdown file from GitHub while retaining the local Markdo
   - `--repo-path <dir>`: Override GitHub directory path (used when document is not in local state)
   - `--message <msg>`: Custom Git commit message (default: `docs(lsy): unpublish <title>`)
 
+### `lsy toggle [flags]` (alias: `switch`)
+
+Launches an interactive terminal checklist (`[x]` = published, `[ ]` = private) for locally tracked documents so you can switch multiple documents between published and private (unpublished) and press Enter to apply all changes at once.
+
+- **Controls**:
+  - `↑` / `↓` (or `j` / `k`): Move cursor
+  - `Space` (or `x` / `←` / `→`): Toggle `[ ]` / `[x]`
+  - `a`: Toggle all documents
+  - `r`: Reset selections to initial state
+  - `Enter`: Confirm and apply changes to GitHub and `state.json`
+  - `q` / `Esc` / `Ctrl+C`: Cancel without making changes
+- **Flags**:
+  - `--repo <owner/repo>`: Override GitHub repository
+  - `--branch <branch>`: Override GitHub branch
+  - `--repo-path <dir>`: Override GitHub directory path
+  - `--message <msg>`: Custom Git commit message
+  - `--fetch`: Refresh newly published documents from Linear before pushing to GitHub
+  - `--with-image`: Download images locally when `--fetch` is enabled (overrides config)
+  - `--no-frontmatter`: Omit YAML frontmatter when `--fetch` is enabled
+  - `--published`: Show only currently published documents
+  - `--unpublished`: Show only currently private (unpublished) documents
+  - `--dry-run`: Preview planned changes after confirmation without modifying GitHub or `state.json`
+
 ### `lsy list [flags]` (alias: `ls`)
 
 Lists locally tracked documents and their publish status.
@@ -141,6 +164,7 @@ Lists locally tracked documents and their publish status.
 - **Flags**:
   - `--published`: Show only published documents
   - `--unpublished`: Show only unpublished documents
+  - `-i`, `--interactive`: Launch interactive publish/private toggle view
   - `--json`: Output machine-readable JSON
 
 ### `lsy rm <url-or-name> [flags]`
