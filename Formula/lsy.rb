@@ -1,26 +1,26 @@
 class Lsy < Formula
   desc "CLI to publish Linear documents to GitHub as Markdown"
   homepage "https://github.com/frinfo702/linear-doc-sync"
-  version "0.1.0"
+  version "0.1.1"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/frinfo702/linear-doc-sync/releases/download/v0.1.0/lsy_0.1.0_darwin_arm64.tar.gz"
-      sha256 "dea235e71e730db6f5407add2efd8788c48e454fd8baf9cc5adfa1683979726e"
+      url "https://github.com/frinfo702/linear-doc-sync/releases/download/v0.1.1/lsy_0.1.1_darwin_arm64.tar.gz"
+      sha256 "563ea72016ada1c7e3ea255170dcd91933efa9bdca7e6efe566da61531a00bdb"
     else
-      url "https://github.com/frinfo702/linear-doc-sync/releases/download/v0.1.0/lsy_0.1.0_darwin_amd64.tar.gz"
-      sha256 "fcabbfc3ea8a60e729e6d712f87cf37ee99ad78347610429366339bb5600780e"
+      url "https://github.com/frinfo702/linear-doc-sync/releases/download/v0.1.1/lsy_0.1.1_darwin_amd64.tar.gz"
+      sha256 "3904bc9353fdfb8baab5e522a2f954874172fe3212ab83b4cadc3c6948e1b239"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/frinfo702/linear-doc-sync/releases/download/v0.1.0/lsy_0.1.0_linux_arm64.tar.gz"
-      sha256 "205f647760f9bb56ad272b4f98c60182dba564e973c271979f4c86e2e453c68f"
+      url "https://github.com/frinfo702/linear-doc-sync/releases/download/v0.1.1/lsy_0.1.1_linux_arm64.tar.gz"
+      sha256 "a9f760a14c750b91cc86d09f2102f794102a901668e199fa9cdbc73bd80af6c4"
     else
-      url "https://github.com/frinfo702/linear-doc-sync/releases/download/v0.1.0/lsy_0.1.0_linux_amd64.tar.gz"
-      sha256 "a1606675ba90fbecea99fb3c473ec94cced5b0754470b6d864d2ab753dfea057"
+      url "https://github.com/frinfo702/linear-doc-sync/releases/download/v0.1.1/lsy_0.1.1_linux_amd64.tar.gz"
+      sha256 "84fd94a21a5985331b2a56c0aaa1dc4731a984c7ea7ce745302a920907d425c0"
     end
   end
 
